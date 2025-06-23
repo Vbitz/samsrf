@@ -286,7 +286,7 @@ def _load_srf_data(filepath: str) -> SrfData:
 
 def _load_roi(roi_path: str) -> np.ndarray:
     """Load ROI vertex indices."""
-    from ..io import load_label, load_volume
+    from ..io import load_label, load_volume, load_surface
     
     roi_path = Path(roi_path)
     suffix = roi_path.suffix.lower()
@@ -294,6 +294,17 @@ def _load_roi(roi_path: str) -> np.ndarray:
     if suffix in ['.label', '.annot']:
         # FreeSurfer label/annotation format
         return load_label(roi_path)
+    elif suffix == '.gii':
+        # GIFTI label/mask format
+        srf = load_surface(roi_path, load_data=True)
+        
+        # Look for label data in the GIFTI file
+        if srf.data is not None and srf.data.shape[0] > 0:
+            # Use first data array as ROI mask
+            roi_data = srf.data[0, :]
+            return np.where(roi_data > 0)[0]
+        else:
+            raise ValueError("No label data found in GIFTI file")
     elif suffix in ['.nii', '.nii.gz']:
         # NIfTI mask format - load and find non-zero voxels
         volume_data = load_volume(roi_path)

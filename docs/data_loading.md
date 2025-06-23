@@ -9,7 +9,7 @@ PySamSrf provides comprehensive data loading utilities for various neuroimaging 
 - **Surface data**: GIFTI (.gii), FreeSurfer (.surf, .pial, .white, .inflated), SamSrf (.srf)
 - **Volume data**: NIfTI (.nii, .nii.gz)
 - **Aperture/stimulus data**: MATLAB (.mat), NumPy (.npz)
-- **ROI data**: FreeSurfer labels (.label, .annot), NIfTI masks (.nii)
+- **ROI data**: GIFTI labels (.gii), FreeSurfer labels (.label, .annot), NIfTI masks (.nii)
 
 ## Installation
 
@@ -120,6 +120,10 @@ roi_vertices = load_label('V1.label')
 
 # Load FreeSurfer annotation
 roi_vertices = load_label('aparc.annot')
+
+# For GIFTI ROI files, use the general _load_roi function
+from pysamsrf.fitting.fit_prf import _load_roi
+roi_vertices = _load_roi('V1_roi.gii')
 ```
 
 ## Integration with pRF Fitting
@@ -141,7 +145,7 @@ model = Model(
 results = fit_prf(
     model=model,
     srf_data='lh.surface.gii',  # Can be path or SrfData object
-    roi='V1.label'  # Optional ROI restriction
+    roi='V1.label'  # Optional ROI restriction (.label, .annot, .gii, .nii)
 )
 ```
 
