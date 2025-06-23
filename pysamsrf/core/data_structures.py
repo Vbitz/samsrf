@@ -191,6 +191,8 @@ class Model:
     tr: float = 1.0  # Repetition time
     hrf: Union[str, np.ndarray, int, None] = 0  # 0=SPM canonical, None=de Haas
     aperture_file: str = ""
+    apertures: Optional[np.ndarray] = None  # Loaded aperture data
+    aperture_resolution: Optional[List[int]] = None  # Aperture resolution [width, height]
     
     # Search space configuration
     polar_search_space: bool = True
@@ -267,6 +269,35 @@ class Model:
                     current_values = getattr(self, param_attr)
                     scaled_values = current_values * scaling_factor
                     setattr(self, param_attr, scaled_values)
+    
+    def load_apertures(self) -> None:
+        """
+        Load aperture data from aperture_file path.
+        
+        Raises
+        ------
+        ValueError
+            If aperture_file is not set or file cannot be loaded
+        """
+        if not self.aperture_file:
+            raise ValueError("No aperture file specified in model")
+        
+        from pathlib import Path
+        if not Path(self.aperture_file).exists():
+            raise FileNotFoundError(f"Aperture file not found: {self.aperture_file}")
+        
+        # Import here to avoid circular imports
+        from ..io.aperture_io import load_apertures
+        
+        # Load aperture data
+        aperture_data = load_apertures(self.aperture_file)
+        self.apertures = aperture_data['apertures']
+        self.aperture_resolution = aperture_data.get('resolution')
+        
+        # Store any timing information if available
+        if 'timing' in aperture_data and aperture_data['timing'] is not None:
+            # Could be used to validate TR or for temporal modeling
+            self._aperture_timing = aperture_data['timing']
 
 
 @dataclass 

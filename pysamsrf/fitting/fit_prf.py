@@ -265,23 +265,46 @@ def fine_fit(coarse_params: np.ndarray, coarse_errors: np.ndarray,
 
 def _load_srf_data(filepath: str) -> SrfData:
     """Load SrfData from file."""
-    # This would load from various formats (MAT, GII, NII)
-    # For now, assume it's implemented elsewhere
-    raise NotImplementedError("Data loading not yet implemented")
+    from ..io import load_surface, load_volume
+    
+    filepath = Path(filepath)
+    suffix = filepath.suffix.lower()
+    
+    # Determine file type and load accordingly
+    if suffix in ['.gii', '.surf', '.pial', '.white', '.inflated']:
+        # Surface data
+        return load_surface(filepath)
+    elif suffix in ['.nii', '.nii.gz']:
+        # Volume data
+        return load_volume(filepath)
+    elif suffix == '.srf':
+        # Native SamSrf format (MATLAB)
+        return load_surface(filepath)
+    else:
+        raise ValueError(f"Unsupported data format: {suffix}")
 
 
 def _load_roi(roi_path: str) -> np.ndarray:
     """Load ROI vertex indices."""
-    # This would load ROI from label files or masks
-    # For now, return placeholder
-    if roi_path.endswith('.label'):
-        # FreeSurfer label format
-        raise NotImplementedError("Label loading not yet implemented")
-    elif roi_path.endswith('.nii'):
-        # NIfTI mask format
-        raise NotImplementedError("NIfTI ROI loading not yet implemented")
+    from ..io import load_label, load_volume
+    
+    roi_path = Path(roi_path)
+    suffix = roi_path.suffix.lower()
+    
+    if suffix in ['.label', '.annot']:
+        # FreeSurfer label/annotation format
+        return load_label(roi_path)
+    elif suffix in ['.nii', '.nii.gz']:
+        # NIfTI mask format - load and find non-zero voxels
+        volume_data = load_volume(roi_path)
+        if volume_data.data is not None and volume_data.data.shape[0] > 0:
+            # Return indices where mask is non-zero
+            mask_values = volume_data.data[0, :]
+            return np.where(mask_values > 0)[0]
+        else:
+            raise ValueError("No mask data found in NIfTI file")
     else:
-        raise ValueError(f"Unknown ROI format: {roi_path}")
+        raise ValueError(f"Unknown ROI format: {suffix}")
 
 
 def _load_apertures(aperture_file: str) -> np.ndarray:
@@ -289,22 +312,16 @@ def _load_apertures(aperture_file: str) -> np.ndarray:
     if not aperture_file:
         raise ValueError("No aperture file specified")
     
-    # This would load from MAT files or other formats
-    # For now, create synthetic apertures for testing
-    warnings.warn("Using synthetic apertures - implement proper loading")
+    from ..io import load_apertures
     
-    # Create expanding ring stimulus
-    aperture_width = 100
-    n_timepoints = 50
-    apertures = np.zeros((aperture_width**2, n_timepoints))
+    # Load aperture data
+    aperture_data = load_apertures(aperture_file)
+    apertures = aperture_data['apertures']
     
-    for t in range(n_timepoints):
-        radius = 1 + (t / n_timepoints) * 8
-        y, x = np.mgrid[-50:50, -50:50]
-        x = x * 10 / 50  # Scale to degrees
-        y = y * 10 / 50
-        ring = (np.sqrt(x**2 + y**2) < radius).flatten()
-        apertures[:, t] = ring
+    # Transpose if necessary to match expected format (n_pixels x n_timepoints)
+    if apertures.shape[0] < apertures.shape[1]:
+        # Assume it's (n_timepoints x n_pixels) and needs transposing
+        apertures = apertures.T
     
     return apertures
 
