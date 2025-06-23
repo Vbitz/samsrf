@@ -131,8 +131,8 @@ roi_vertices = _load_roi('V1_roi.gii')
 The data loading functions are integrated into the main pRF fitting pipeline:
 
 ```python
-from pysamsrf.models import Model
-from pysamsrf.fitting import fit_prf
+from pysamsrf.core.data_structures import Model
+from pysamsrf.fitting.fit_prf import fit_prf
 
 # Create model
 model = Model(
